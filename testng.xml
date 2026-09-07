@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Insurance Mobile Automation" parallel="false">
+    <test name="Sprint 1">
+        <packages>
+            <package name="tests.sprint1"/>
+        </packages>
+    </test>
+</suite>
