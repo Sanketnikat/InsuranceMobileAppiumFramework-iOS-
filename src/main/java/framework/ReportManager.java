@@ -3,27 +3,41 @@ package framework;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public final class ReportManager {
-    private static ExtentReports extent;
+    private static final Map<String, ExtentReports> EXTENTS =
+            new ConcurrentHashMap<>();
 
     private ReportManager() {}
 
-    public static synchronized ExtentReports getExtent() {
-        if (extent == null) {
-            PathHelper.ensureDirectory("reports/extent");
+    public static synchronized ExtentReports getExtent(String sprint) {
+        return EXTENTS.computeIfAbsent(sprint, ReportManager::createExtent);
+    }
 
-            ExtentSparkReporter reporter =
-                    new ExtentSparkReporter("reports/extent/ExtentReport.html");
+    public static synchronized void flushAll() {
+        EXTENTS.values().forEach(ExtentReports::flush);
+    }
 
-            extent = new ExtentReports();
-            extent.attachReporter(reporter);
+    private static ExtentReports createExtent(String sprint) {
+        String reportDirectory = "reports/extent/" + sprint;
+        PathHelper.ensureDirectory(reportDirectory);
 
-            extent.setSystemInfo("Build", value("build"));
-            extent.setSystemInfo("Environment", value("environment"));
-            extent.setSystemInfo("Platform", value("platform"));
-            extent.setSystemInfo("Device Type", value("deviceType"));
-            extent.setSystemInfo("Device", value("device.name"));
-        }
+        ExtentSparkReporter reporter =
+                new ExtentSparkReporter(
+                        reportDirectory + "/ExtentReport.html"
+                );
+
+        ExtentReports extent = new ExtentReports();
+        extent.attachReporter(reporter);
+
+        extent.setSystemInfo("Sprint", sprint);
+        extent.setSystemInfo("Build", value("build"));
+        extent.setSystemInfo("Environment", value("environment"));
+        extent.setSystemInfo("Platform", value("platform"));
+        extent.setSystemInfo("Device Type", value("deviceType"));
+        extent.setSystemInfo("Device", value("device.name"));
 
         return extent;
     }

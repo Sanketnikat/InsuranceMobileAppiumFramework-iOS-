@@ -1,108 +1,422 @@
 package framework;
 
+import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
+import io.appium.java_client.ios.IOSDriver;
+import io.appium.java_client.ios.options.XCUITestOptions;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URI;
+import java.io.FileInputStream;
+import java.net.URL;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Properties;
 
-public final class DriverManager {
-    private static final ThreadLocal<AndroidDriver> DRIVER = new ThreadLocal<>();
+public class DriverManager {
 
-    private DriverManager() {}
+    private static final ThreadLocal<AppiumDriver> driver =
+            new ThreadLocal<>();
 
-    public static void startAndroidDriver() {
+    private static Properties config;
+
+    // =========================================================
+    // LOAD CONFIGURATION
+    // =========================================================
+
+    static {
         try {
-            String udid = resolveDeviceUdid();
 
-            UiAutomator2Options options = new UiAutomator2Options()
-                    .setPlatformName("Android")
-                    .setAutomationName("UiAutomator2")
-                    .setDeviceName(ConfigReader.get("device.name"))
-                    .setApp(ConfigReader.get("app.path"))
-                    .setNewCommandTimeout(Duration.ofSeconds(120));
+            config = new Properties();
 
-            String platformVersion = ConfigReader.get("platform.version");
-            if (platformVersion != null && !platformVersion.isBlank()) {
-                options.setPlatformVersion(platformVersion);
-            }
-
-            if (udid != null && !udid.isBlank()) {
-                options.setUdid(udid);
-            }
-
-            AndroidDriver driver = new AndroidDriver(
-                    URI.create(ConfigReader.get("appium.server")).toURL(),
-                    options
+            FileInputStream file = new FileInputStream(
+                    "src/test/resources/config.properties"
             );
 
-            DRIVER.set(driver);
+            config.load(file);
+            file.close();
+
         } catch (Exception e) {
-            throw new RuntimeException("Could not start Android Appium driver.", e);
+
+            throw new RuntimeException(
+                    "Could not load config.properties",
+                    e
+            );
         }
     }
 
-    public static AndroidDriver getDriver() {
-        AndroidDriver driver = DRIVER.get();
-        if (driver == null) {
-            throw new IllegalStateException("Driver is not initialized.");
+    // =========================================================
+    // START DRIVER
+    // =========================================================
+
+    public static void startDriver() {
+
+        String platform =
+                config.getProperty("platform");
+
+        if (platform.equalsIgnoreCase("ios")) {
+
+            startIOSDriver();
+
+        } else {
+
+            startAndroidDriver();
         }
-        return driver;
     }
 
-    public static void quitDriver() {
-        AndroidDriver driver = DRIVER.get();
-        if (driver != null) {
-            try {
-                driver.quit();
-            } finally {
-                DRIVER.remove();
-            }
-        }
-    }
+    // =========================================================
+    // iOS DRIVER
+    // Supports:
+    // 1. Physical iPhone
+    // 2. iOS Simulator
+    // =========================================================
 
-    private static String resolveDeviceUdid() {
-        String configured = ConfigReader.get("device.udid");
-        if (configured != null && !configured.isBlank()) {
-            return configured;
-        }
-
-        List<String> devices = new ArrayList<>();
+    private static void startIOSDriver() {
 
         try {
-            Process process = new ProcessBuilder("adb", "devices")
-                    .redirectErrorStream(true)
-                    .start();
 
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
+            String serverUrl =
+                    config.getProperty("appium.server");
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.matches("^\\S+\\s+device$")) {
-                        devices.add(line.split("\\s+")[0]);
-                    }
-                }
+            String deviceType =
+                    config.getProperty(
+                            "deviceType",
+                            "real"
+                    );
+
+            String bundleId =
+                    config.getProperty(
+                            "ios.bundle.id"
+                    );
+
+            XCUITestOptions options =
+                    new XCUITestOptions();
+
+            options.setPlatformName("iOS");
+            options.setAutomationName("XCUITest");
+
+            // =================================================
+            // PHYSICAL iPHONE
+            // =================================================
+
+            if (deviceType.equalsIgnoreCase("real")) {
+
+                String deviceName =
+                        config.getProperty(
+                                "ios.real.device.name"
+                        );
+
+                String platformVersion =
+                        config.getProperty(
+                                "ios.real.platform.version"
+                        );
+
+                String udid =
+                        config.getProperty(
+                                "ios.real.udid"
+                        );
+
+                options.setDeviceName(deviceName);
+
+                options.setPlatformVersion(
+                        platformVersion
+                );
+
+                options.setUdid(udid);
+
+                options.setBundleId(bundleId);
+
+                // ---------------------------------------------
+                // WebDriverAgent Signing
+                // ---------------------------------------------
+
+                String xcodeOrgId =
+                        config.getProperty(
+                                "ios.xcode.org.id"
+                        );
+
+                String xcodeSigningId =
+                        config.getProperty(
+                                "ios.xcode.signing.id",
+                                "Apple Development"
+                        );
+
+                options.setCapability(
+                        "appium:xcodeOrgId",
+                        xcodeOrgId
+                );
+
+                options.setCapability(
+                        "appium:xcodeSigningId",
+                        xcodeSigningId
+                );
+
+                options.setCapability(
+                        "appium:updatedWDABundleId",
+                        "com.sanket.WebDriverAgentRunner"
+                );
+
+                System.out.println(
+                        "======================================"
+                );
+
+                System.out.println(
+                        "iOS PHYSICAL DEVICE"
+                );
+
+                System.out.println(
+                        "Device: " + deviceName
+                );
+
+                System.out.println(
+                        "iOS Version: " + platformVersion
+                );
+
+                System.out.println(
+                        "UDID: " + udid
+                );
+
+                System.out.println(
+                        "======================================"
+                );
             }
 
-            process.waitFor();
+            // =================================================
+            // iOS SIMULATOR
+            // =================================================
 
-            if (devices.size() == 1) {
-                return devices.get(0);
+            else if (
+                    deviceType.equalsIgnoreCase("simulator")
+            ) {
+
+                String deviceName =
+                        config.getProperty(
+                                "ios.sim.device.name"
+                        );
+
+                String platformVersion =
+                        config.getProperty(
+                                "ios.sim.platform.version"
+                        );
+
+                String udid =
+                        config.getProperty(
+                                "ios.sim.udid"
+                        );
+
+                options.setDeviceName(deviceName);
+
+                options.setPlatformVersion(
+                        platformVersion
+                );
+
+                options.setUdid(udid);
+
+                options.setBundleId(bundleId);
+
+                // Simulator is NOT a real device
+                options.setCapability(
+                        "appium:isRealDevice",
+                        false
+                );
+
+                System.out.println(
+                        "======================================"
+                );
+
+                System.out.println(
+                        "iOS SIMULATOR"
+                );
+
+                System.out.println(
+                        "Device: " + deviceName
+                );
+
+                System.out.println(
+                        "iOS Version: " + platformVersion
+                );
+
+                System.out.println(
+                        "UDID: " + udid
+                );
+
+                System.out.println(
+                        "======================================"
+                );
             }
 
-            if (devices.size() > 1) {
-                throw new IllegalStateException(
-                        "Multiple Android devices are connected. Use -Ddevice.udid=<deviceId>.");
+            // =================================================
+            // INVALID DEVICE TYPE
+            // =================================================
+
+            else {
+
+                throw new RuntimeException(
+                        "Invalid deviceType: "
+                                + deviceType
+                                + ". Use 'real' or 'simulator'."
+                );
             }
 
-            return null;
+            // =================================================
+            // COMMON iOS SETTINGS
+            // =================================================
+
+            options.setNewCommandTimeout(
+                    Duration.ofSeconds(120)
+            );
+
+            options.setShowXcodeLog(true);
+
+            // =================================================
+            // CREATE iOS DRIVER
+            // =================================================
+
+            driver.set(
+                    new IOSDriver(
+                            new URL(serverUrl),
+                            options
+                    )
+            );
+
+            System.out.println(
+                    "iOS Appium driver started successfully."
+            );
+
+            System.out.println(
+                    "Bima Sugam Bundle ID: "
+                            + bundleId
+            );
+
         } catch (Exception e) {
-            throw new RuntimeException("Unable to detect Android devices using ADB.", e);
+
+            e.printStackTrace();
+
+            throw new RuntimeException(
+                    "Could not start iOS Appium driver.",
+                    e
+            );
         }
+    }
+
+    // =========================================================
+    // ANDROID DRIVER
+    // =========================================================
+
+    private static void startAndroidDriver() {
+
+        try {
+
+            String serverUrl =
+                    config.getProperty(
+                            "appium.server"
+                    );
+
+            String deviceName =
+                    config.getProperty(
+                            "android.device.name"
+                    );
+
+            String platformVersion =
+                    config.getProperty(
+                            "android.platform.version"
+                    );
+
+            String appPath =
+                    config.getProperty(
+                            "android.app.path"
+                    );
+
+            UiAutomator2Options options =
+                    new UiAutomator2Options();
+
+            options.setPlatformName("Android");
+
+            options.setAutomationName(
+                    "UiAutomator2"
+            );
+
+            options.setDeviceName(
+                    deviceName
+            );
+
+            if (platformVersion != null
+                    && !platformVersion.isEmpty()) {
+
+                options.setPlatformVersion(
+                        platformVersion
+                );
+            }
+
+            if (appPath != null
+                    && !appPath.isEmpty()) {
+
+                options.setApp(appPath);
+            }
+
+            options.setNewCommandTimeout(
+                    Duration.ofSeconds(120)
+            );
+
+            driver.set(
+                    new AndroidDriver(
+                            new URL(serverUrl),
+                            options
+                    )
+            );
+
+            System.out.println(
+                    "Android Appium driver started successfully."
+            );
+
+            System.out.println(
+                    "Android Device: "
+                            + deviceName
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw new RuntimeException(
+                    "Could not start Android Appium driver.",
+                    e
+            );
+        }
+    }
+
+    // =========================================================
+    // GET DRIVER
+    // =========================================================
+
+    public static AppiumDriver getDriver() {
+
+        return driver.get();
+    }
+
+    // =========================================================
+    // QUIT DRIVER
+    // =========================================================
+
+    public static void quitDriver() {
+
+        if (driver.get() != null) {
+
+            try {
+
+                driver.get().quit();
+
+            } finally {
+
+                driver.remove();
+            }
+        }
+    }
+
+    // =========================================================
+    // GET CONFIG
+    // =========================================================
+
+    public static Properties getConfig() {
+
+        return config;
     }
 }

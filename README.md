@@ -4,7 +4,7 @@ A simple sprint-wise Appium automation framework for local Android testing.
 
 ## Technology
 
-- Java 21
+- Java 25
 - Maven
 - Appium Java Client
 - TestNG

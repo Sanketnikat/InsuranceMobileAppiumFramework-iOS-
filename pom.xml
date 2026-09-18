@@ -12,14 +12,24 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
+
+        <!-- Java -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
+        <!-- Appium -->
         <appium.version>10.0.0</appium.version>
+
+        <!-- TestNG -->
         <testng.version>7.11.0</testng.version>
+
+        <!-- Allure -->
         <allure.version>2.29.1</allure.version>
+
+        <!-- Extent Reports -->
         <extent.version>5.1.2</extent.version>
+
     </properties>
 
     <dependencies>
@@ -39,9 +49,6 @@
         </dependency>
 
         <!-- TestNG -->
-        <!-- IMPORTANT:
-             No <scope>test</scope> because BaseTest
-             is inside src/main/java -->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -79,23 +86,28 @@
                 </configuration>
             </plugin>
 
-            <!-- Surefire - TestNG -->
+            <!-- Maven Surefire + TestNG -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.3</version>
 
                 <configuration>
+
+                    <!-- TestNG Suite -->
                     <suiteXmlFiles>
                         <suiteXmlFile>testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
 
+                    <!-- Allure Results -->
                     <systemPropertyVariables>
                         <allure.results.directory>
                             ${project.build.directory}/allure-results
                         </allure.results.directory>
                     </systemPropertyVariables>
+
                 </configuration>
+
             </plugin>
 
         </plugins>

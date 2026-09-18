@@ -5,3 +5,27 @@ videos/
 .idea/
 *.class
 *.log
+
+# Local credentials, mobile-device configuration, and signing material.
+# Keep shareable defaults in versioned example files only.
+.env
+.env.*
+!.env.example
+src/test/resources/config.local.properties
+src/test/resources/test-data/**/*.private.properties
+src/test/resources/test-data/**/*.local.properties
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+*.jks
+*.keystore
+
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
