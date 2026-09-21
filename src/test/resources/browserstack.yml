@@ -1,0 +1,23 @@
+userName: ${programsanketn_U2nWIV}
+accessKey: ${CNJkVGT8CspJRjtpd6Ln}
+
+framework: testng
+
+app: bs://YOUR_APP_ID
+
+platforms:
+  - platformName: ios
+    deviceName: iPhone 17 Pro
+    platformVersion: "26.5"
+
+browserstackLocal: false
+
+buildName: "Bima Sugam iOS Build"
+projectName: "Insurance Mobile Appium Framework"
+
+debug: true
+networkLogs: true
+video: true
+deviceLogs: true
+
+testObservability: true
