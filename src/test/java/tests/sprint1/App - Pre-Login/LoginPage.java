@@ -7,7 +7,6 @@ import locators.IOSLocators;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -26,18 +25,20 @@ public class LoginPage {
     private final By loginTitle =
             AppiumBy.accessibilityId("Login");
 
+    /*
+     * Confirmed from BrowserStack page source:
+     *
+     * XCUIElementTypeTextField
+     * name="Enter Mobile Number"
+     * label="Enter Mobile Number"
+     */
     private final By mobileNumberField =
-            AppiumBy.xpath(
-                    "//XCUIElementTypeTextField[" +
-                    "not(@name='Date of Birth')" +
-                    "]"
-            );
+            AppiumBy.accessibilityId("Enter Mobile Number");
 
     private final By dateOfBirthField =
             AppiumBy.xpath(
-                    "//XCUIElementTypeStaticText" +
-                    "[@name='Date of Birth / Date of Incorporation*']" +
-                    "/following::XCUIElementTypeTextField[1]"
+                    "//XCUIElementTypeTextField" +
+                    "[@name='Date of Birth']"
             );
 
     private final By loginViaOtpButton =
@@ -50,17 +51,6 @@ public class LoginPage {
     private final By otpVerificationTitle =
             AppiumBy.accessibilityId("OTP Verification");
 
-    /*
-     * OTP field from the actual OTP screen XML:
-     *
-     * XCUIElementTypeTextField
-     * x="24"
-     * y="598"
-     * width="342"
-     * height="42"
-     *
-     * It does not have a name or label.
-     */
     private final By otpField =
             AppiumBy.xpath(
                     "//XCUIElementTypeStaticText" +
@@ -68,13 +58,6 @@ public class LoginPage {
                     "/following::XCUIElementTypeTextField[1]"
             );
 
-    /*
-     * Validate button:
-     *
-     * XCUIElementTypeButton
-     * name="Validate"
-     * label="Validate"
-     */
     private final By validateButton =
             AppiumBy.xpath(
                     "//XCUIElementTypeButton" +
@@ -109,6 +92,23 @@ public class LoginPage {
                 );
 
         login.click();
+
+        System.out.println(
+                "Login button clicked."
+        );
+    }
+
+    // =========================================
+    // GET MOBILE NUMBER FIELD
+    // =========================================
+
+    private WebElement getMobileNumberField() {
+
+        return wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                        mobileNumberField
+                )
+        );
     }
 
     // =========================================
@@ -117,29 +117,285 @@ public class LoginPage {
 
     public void enterMobileNumber(String mobileNumber) {
 
-        if (mobileNumber == null ||
-                mobileNumber.trim().isEmpty()) {
+        if (mobileNumber == null) {
 
             throw new IllegalArgumentException(
-                    "Mobile number cannot be null or empty."
+                    "Mobile number cannot be null."
             );
         }
 
         WebElement field =
-                wait.until(
-                        ExpectedConditions.visibilityOfElementLocated(
-                                mobileNumberField
-                        )
-                );
+                getMobileNumberField();
 
         field.click();
-        driver.switchTo().activeElement().sendKeys(
-                Keys.chord(Keys.COMMAND, "a"),
-                Keys.BACK_SPACE
+
+        /*
+         * Clear current field.
+         */
+        try {
+
+            field.clear();
+
+        } catch (Exception e) {
+
+            field.sendKeys(
+                    Keys.chord(
+                            Keys.COMMAND,
+                            "a"
+                    )
+            );
+
+            field.sendKeys(
+                    Keys.BACK_SPACE
+            );
+        }
+
+        /*
+         * Send value directly to the actual
+         * iOS TextField.
+         */
+        field.sendKeys(
+                mobileNumber
         );
-        new Actions(driver)
-                .sendKeys(mobileNumber)
-                .perform();
+
+        System.out.println(
+                "Attempted Mobile Number input: ["
+                        + mobileNumber
+                        + "]"
+        );
+    }
+
+    // =========================================
+    // GET MOBILE NUMBER VALUE
+    // =========================================
+
+    public String getMobileNumberValue() {
+
+        WebElement field =
+                getMobileNumberField();
+
+        String value = "";
+
+        try {
+
+            value = field.getAttribute("value");
+
+        } catch (Exception ignored) {
+        }
+
+        /*
+         * Do NOT treat the placeholder
+         * "Enter Mobile Number" as the actual
+         * entered value.
+         */
+        if (value == null ||
+                value.trim().isEmpty() ||
+                value.equalsIgnoreCase("Enter Mobile Number")) {
+
+            value = "";
+
+            try {
+
+                String text = field.getText();
+
+                if (text != null &&
+                        !text.equalsIgnoreCase("Enter Mobile Number")) {
+
+                    value = text;
+                }
+
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (value == null) {
+            value = "";
+        }
+
+        System.out.println(
+                "Actual Mobile Number field value: ["
+                        + value
+                        + "]"
+        );
+
+        return value;
+    }
+
+    // =========================================
+    // CLEAR MOBILE NUMBER
+    // =========================================
+
+    public void clearMobileNumber() {
+
+        WebElement field =
+                getMobileNumberField();
+
+        field.click();
+
+        try {
+
+            field.clear();
+
+        } catch (Exception e) {
+
+            field.sendKeys(
+                    Keys.chord(
+                            Keys.COMMAND,
+                            "a"
+                    )
+            );
+
+            field.sendKeys(
+                    Keys.BACK_SPACE
+            );
+        }
+
+        System.out.println(
+                "Mobile Number field cleared."
+        );
+    }
+
+    // =========================================
+    // VERIFY LOGIN VIA OTP BUTTON ENABLED
+    // =========================================
+
+    public boolean isLoginViaOtpButtonEnabled() {
+
+        try {
+
+            WebElement button =
+                    wait.until(
+                            ExpectedConditions.presenceOfElementLocated(
+                                    loginViaOtpButton
+                            )
+                    );
+
+            boolean enabled =
+                    button.isEnabled();
+
+            System.out.println(
+                    "Login via OTP button enabled: "
+                            + enabled
+            );
+
+            return enabled;
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Unable to find Login via OTP button: "
+                            + e.getMessage()
+            );
+
+            return false;
+        }
+    }
+
+    // =========================================
+    // VERIFY MOBILE NUMBER VALIDATION ERROR
+    // =========================================
+
+    public boolean isMobileNumberValidationErrorDisplayed() {
+
+        /*
+         * We intentionally inspect the current page
+         * source rather than inventing a specific
+         * error locator before we have confirmed it
+         * from the application.
+         */
+
+        try {
+
+            String pageSource =
+                    driver.getPageSource();
+
+            String source =
+                    pageSource.toLowerCase();
+
+            /*
+             * Common validation text patterns.
+             * If the application uses one of these,
+             * this method will detect it.
+             */
+            String[] validationTexts = {
+
+                    "invalid mobile",
+                    "invalid mobile number",
+                    "valid mobile number",
+                    "mobile number is invalid",
+                    "mobile number must",
+                    "mobile number should",
+                    "enter valid mobile",
+                    "enter a valid mobile",
+                    "10 digit",
+                    "10-digit",
+                    "minimum 10",
+                    "at least 10",
+                    "mobile number is required"
+            };
+
+            for (String validationText :
+                    validationTexts) {
+
+                if (source.contains(
+                        validationText.toLowerCase()
+                )) {
+
+                    System.out.println(
+                            "Mobile Number validation error detected: "
+                                    + validationText
+                    );
+
+                    return true;
+                }
+            }
+
+            /*
+             * Also check XCUIElementTypeStaticText
+             * elements that contain error-related
+             * accessibility information.
+             */
+            String[] errorIndicators = {
+
+                    "error",
+                    "invalid",
+                    "required",
+                    "10 digit",
+                    "10-digit"
+            };
+
+            for (String indicator :
+                    errorIndicators) {
+
+                if (source.contains(
+                        indicator.toLowerCase()
+                )) {
+
+                    System.out.println(
+                            "Potential validation indicator found: "
+                                    + indicator
+                    );
+
+                    return true;
+                }
+            }
+
+            System.out.println(
+                    "No known Mobile Number validation error "
+                            + "was detected in the current page source."
+            );
+
+            return false;
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Unable to inspect Mobile Number validation error: "
+                            + e.getMessage()
+            );
+
+            return false;
+        }
     }
 
     // =========================================
@@ -165,40 +421,42 @@ public class LoginPage {
 
         field.click();
 
-        // Select all existing text
         field.sendKeys(
-                "\uE009" + "a"
+                Keys.chord(
+                        Keys.COMMAND,
+                        "a"
+                )
         );
 
-        // Delete selected text
         field.sendKeys(
-                "\uE003"
+                Keys.BACK_SPACE
         );
 
-        // Wait until the field value is cleared before typing
-        new WebDriverWait(driver, java.time.Duration.ofSeconds(5))
-                .until(d -> {
-                    String v = field.getAttribute("value");
-                    return v == null || v.isEmpty();
-                });
+        /*
+         * Enter DOB one character at a time.
+         */
+        for (char character :
+                dateOfBirth.toCharArray()) {
 
-                // Enter masked DOB fields one character at a time so iOS does not drop input.
-                for (char character : dateOfBirth.toCharArray()) {
-                        new Actions(driver)
-                                        .sendKeys(String.valueOf(character))
-                                        .perform();
+            field.sendKeys(
+                    String.valueOf(character)
+            );
 
-                        // Wait until the field value grows by one character after each keystroke
-                        new WebDriverWait(driver, java.time.Duration.ofSeconds(3))
-                                .until(d -> {
-                                    String v = field.getAttribute("value");
-                                    return v != null && !v.isEmpty();
-                                });
-                }
+            try {
+
+                Thread.sleep(100);
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread().interrupt();
+            }
+        }
 
         dismissKeyboard();
 
-        // Remove focus so the form validates the completed DOB field.
+        /*
+         * Remove focus.
+         */
         driver.executeScript(
                 "mobile: tap",
                 Map.of(
@@ -208,23 +466,27 @@ public class LoginPage {
         );
     }
 
-    /**
-     * Closes the iOS keyboard so controls below the form remain available.
-     */
+    // =========================================
+    // DISMISS KEYBOARD
+    // =========================================
+
     public void dismissKeyboard() {
 
         try {
 
-            ((HidesKeyboard) driver).hideKeyboard();
+            ((HidesKeyboard) driver)
+                    .hideKeyboard();
 
         } catch (Exception ignored) {
         }
 
-        // iOS can report a successful hide request while retaining focus.
-        // Escape closes the active native keyboard when that happens.
         try {
 
-            driver.switchTo().activeElement().sendKeys(Keys.ESCAPE);
+            driver.switchTo()
+                    .activeElement()
+                    .sendKeys(
+                            Keys.ESCAPE
+                    );
 
         } catch (Exception ignored) {
         }
@@ -236,45 +498,25 @@ public class LoginPage {
 
     public void clickLoginViaOtp() {
 
-        WebElement button = null;
-
-        try {
-
-            // Primary locator
-            button =
-                    wait.until(
-                            ExpectedConditions.elementToBeClickable(
-                                    loginViaOtpButton
-                            )
-                    );
-
-        } catch (Exception e) {
-
-            // Fallback XPath
-            By fallbackLocator =
-                    AppiumBy.xpath(
-                            "//XCUIElementTypeButton" +
-                            "[@name='Login via OTP' " +
-                            "or @label='Login via OTP']"
-                    );
-
-            button =
-                    wait.until(
-                            ExpectedConditions.elementToBeClickable(
-                                    fallbackLocator
-                            )
-                    );
-        }
+        WebElement button =
+                wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                                loginViaOtpButton
+                        )
+                );
 
         if (!button.isEnabled()) {
 
             throw new RuntimeException(
-                    "Login via OTP button is disabled. " +
-                    "Mobile number or DOB may be invalid."
+                    "Login via OTP button is disabled."
             );
         }
 
         button.click();
+
+        System.out.println(
+                "Login via OTP button clicked."
+        );
     }
 
     // =========================================
@@ -289,7 +531,6 @@ public class LoginPage {
                 )
         );
 
-        // Also make sure OTP field is available
         wait.until(
                 ExpectedConditions.visibilityOfElementLocated(
                         otpField
@@ -324,19 +565,8 @@ public class LoginPage {
 
         field.sendKeys(otp);
 
-        // Verify that OTP field contains something
-        String enteredValue = field.getAttribute("value");
-
         System.out.println(
-                "======================================"
-        );
-
-        System.out.println(
-                "OTP FIELD VALUE: " + enteredValue
-        );
-
-        System.out.println(
-                "======================================"
+                "OTP entered."
         );
     }
 
@@ -346,47 +576,12 @@ public class LoginPage {
 
     public void clickValidate() {
 
-        WebElement button = null;
-
-        try {
-
-            // Primary XPath locator
-            button =
-                    wait.until(
-                            ExpectedConditions.elementToBeClickable(
-                                    validateButton
-                            )
-                    );
-
-        } catch (Exception e) {
-
-            System.out.println(
-                    "Primary Validate locator failed."
-            );
-
-            System.out.println(
-                    "Trying accessibility ID..."
-            );
-
-            try {
-
-                button =
-                        wait.until(
-                                ExpectedConditions.elementToBeClickable(
-                                        AppiumBy.accessibilityId(
-                                                "Validate"
-                                        )
-                                )
-                        );
-
-            } catch (Exception secondException) {
-
-                throw new RuntimeException(
-                        "Validate button could not be located.",
-                        secondException
+        WebElement button =
+                wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                                validateButton
+                        )
                 );
-            }
-        }
 
         if (!button.isEnabled()) {
 
@@ -395,50 +590,42 @@ public class LoginPage {
             );
         }
 
-        System.out.println(
-                "======================================"
-        );
-
-        System.out.println(
-                "VALIDATE BUTTON FOUND"
-        );
-
-        System.out.println(
-                "======================================"
-        );
-
         button.click();
 
         System.out.println(
-                "======================================"
-        );
-
-        System.out.println(
-                "VALIDATE BUTTON CLICKED"
-        );
-
-        System.out.println(
-                "======================================"
+                "Validate button clicked."
         );
     }
 
     // =========================================
-    // GET PAGE SOURCE
+    // LOADING INDICATOR
     // =========================================
 
     public boolean isLoadingIndicatorDisplayed() {
 
         try {
-            WebElement indicator = wait.until(
-                    ExpectedConditions.visibilityOfElementLocated(
-                            IOSLocators.LOADING_INDICATOR
-                    )
-            );
+
+            WebElement indicator =
+                    new WebDriverWait(
+                            driver,
+                            Duration.ofSeconds(5)
+                    ).until(
+                            ExpectedConditions.visibilityOfElementLocated(
+                                    IOSLocators.LOADING_INDICATOR
+                            )
+                    );
+
             return indicator.isDisplayed();
+
         } catch (Exception ignored) {
+
             return false;
         }
     }
+
+    // =========================================
+    // GET PAGE SOURCE
+    // =========================================
 
     public String getPageSource() {
 

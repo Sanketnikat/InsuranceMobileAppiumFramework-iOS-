@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "browserstack-node-sdk": "^1.70.3"
+  }
+}

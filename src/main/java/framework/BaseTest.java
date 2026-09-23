@@ -27,7 +27,7 @@ public abstract class BaseTest {
     public void setUp(ITestResult result) {
 
         // Start Android or iOS based on configuration
-        DriverManager.startDriver();
+        DriverManager.startDriver(result.getMethod().getMethodName());
 
         driver = DriverManager.getDriver();
 
@@ -133,11 +133,49 @@ public abstract class BaseTest {
                 }
             }
 
+            // Update session status on BrowserStack if running in cloud
+            updateBrowserStackStatus(result);
+
             // Quit Appium
             DriverManager.quitDriver();
 
             // Flush Extent report
             ReportManager.flushAll();
+        }
+    }
+
+    private void updateBrowserStackStatus(ITestResult result) {
+        if (driver == null) {
+            return;
+        }
+
+        String execution = ConfigReader.get("execution");
+        if (!"browserstack".equalsIgnoreCase(execution)) {
+            return;
+        }
+
+        try {
+            org.openqa.selenium.JavascriptExecutor jse =
+                    (org.openqa.selenium.JavascriptExecutor) driver;
+
+            if (result.getStatus() == ITestResult.SUCCESS) {
+                jse.executeScript("browserstack_executor: {\"action\": \"setSessionStatus\", \"arguments\": {\"status\": \"passed\", \"reason\": \"Test passed successfully\"}}");
+            } else if (result.getStatus() == ITestResult.FAILURE) {
+                String failureReason = result.getThrowable() != null
+                        ? result.getThrowable().getMessage()
+                        : "Test failed";
+                if (failureReason != null) {
+                    failureReason = failureReason.replaceAll("[\"\r\n]", " ");
+                    if (failureReason.length() > 200) {
+                        failureReason = failureReason.substring(0, 200) + "...";
+                    }
+                } else {
+                    failureReason = "Test failed";
+                }
+                jse.executeScript("browserstack_executor: {\"action\": \"setSessionStatus\", \"arguments\": {\"status\": \"failed\", \"reason\": \"" + failureReason + "\"}}");
+            }
+        } catch (Exception ignored) {
+            // Ignore if driver session is already closed or does not support javascript execution
         }
     }
 

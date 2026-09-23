@@ -48,6 +48,10 @@ public class DriverManager {
     // =========================================================
 
     public static void startDriver() {
+        startDriver("Bima Sugam Test");
+    }
+
+    public static void startDriver(String testName) {
 
         String execution =
                 config.getProperty(
@@ -61,6 +65,7 @@ public class DriverManager {
         System.out.println("======================================");
         System.out.println("EXECUTION: " + execution);
         System.out.println("PLATFORM : " + platform);
+        System.out.println("TEST NAME: " + testName);
         System.out.println("======================================");
 
         if (platform == null || platform.trim().isEmpty()) {
@@ -104,11 +109,11 @@ public class DriverManager {
 
             if (platform.equalsIgnoreCase("ios")) {
 
-                startBrowserStackIOSDriver();
+                startBrowserStackIOSDriver(testName);
 
             } else if (platform.equalsIgnoreCase("android")) {
 
-                startBrowserStackAndroidDriver();
+                startBrowserStackAndroidDriver(testName);
 
             } else {
 
@@ -522,18 +527,20 @@ public class DriverManager {
     // BROWSERSTACK iOS DRIVER
     // =========================================================
 
-    private static void startBrowserStackIOSDriver() {
+    private static void startBrowserStackIOSDriver(String testName) {
 
         try {
 
             String username =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_USERNAME"
+                    resolveProperty(
+                            "BROWSERSTACK_USERNAME",
+                            "browserstack.username"
                     );
 
             String accessKey =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_ACCESS_KEY"
+                    resolveProperty(
+                            "BROWSERSTACK_ACCESS_KEY",
+                            "browserstack.access.key"
                     );
 
             String browserStackUrl =
@@ -543,18 +550,21 @@ public class DriverManager {
                     );
 
             String deviceName =
-                    config.getProperty(
+                    resolveProperty(
+                            "BROWSERSTACK_IOS_DEVICE",
                             "browserstack.ios.device"
                     );
 
             String platformVersion =
-                    config.getProperty(
+                    resolveProperty(
+                            "BROWSERSTACK_IOS_PLATFORM_VERSION",
                             "browserstack.ios.platform.version"
                     );
 
             String app =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_IOS_APP"
+                    resolveProperty(
+                            "BROWSERSTACK_IOS_APP",
+                            "browserstack.ios.app"
                     );
 
             validateBrowserStackCredentials(
@@ -566,6 +576,13 @@ public class DriverManager {
                     app,
                     "BROWSERSTACK_IOS_APP"
             );
+
+            URL remoteUrl =
+                    getAuthenticatedBrowserStackUrl(
+                            browserStackUrl,
+                            username,
+                            accessKey
+                    );
 
             XCUITestOptions options =
                     new XCUITestOptions();
@@ -593,13 +610,13 @@ public class DriverManager {
                     app
             );
 
-            // BrowserStack credentials
+            // BrowserStack credentials & options
             options.setCapability(
                     "bstack:options",
                     createBrowserStackOptions(
                             username,
                             accessKey,
-                            "Bima Sugam iOS"
+                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam iOS"
                     )
             );
 
@@ -628,6 +645,10 @@ public class DriverManager {
             );
 
             System.out.println(
+                    "Session: " + testName
+            );
+
+            System.out.println(
                     "======================================"
             );
 
@@ -637,7 +658,7 @@ public class DriverManager {
 
             driver.set(
                     new IOSDriver(
-                            new URL(browserStackUrl),
+                            remoteUrl,
                             options
                     )
             );
@@ -661,18 +682,20 @@ public class DriverManager {
     // BROWSERSTACK ANDROID DRIVER
     // =========================================================
 
-    private static void startBrowserStackAndroidDriver() {
+    private static void startBrowserStackAndroidDriver(String testName) {
 
         try {
 
             String username =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_USERNAME"
+                    resolveProperty(
+                            "BROWSERSTACK_USERNAME",
+                            "browserstack.username"
                     );
 
             String accessKey =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_ACCESS_KEY"
+                    resolveProperty(
+                            "BROWSERSTACK_ACCESS_KEY",
+                            "browserstack.access.key"
                     );
 
             String browserStackUrl =
@@ -682,18 +705,21 @@ public class DriverManager {
                     );
 
             String deviceName =
-                    config.getProperty(
+                    resolveProperty(
+                            "BROWSERSTACK_ANDROID_DEVICE",
                             "browserstack.android.device"
                     );
 
             String platformVersion =
-                    config.getProperty(
+                    resolveProperty(
+                            "BROWSERSTACK_ANDROID_PLATFORM_VERSION",
                             "browserstack.android.platform.version"
                     );
 
             String app =
-                    getEnvironmentVariable(
-                            "BROWSERSTACK_ANDROID_APP"
+                    resolveProperty(
+                            "BROWSERSTACK_ANDROID_APP",
+                            "browserstack.android.app"
                     );
 
             validateBrowserStackCredentials(
@@ -705,6 +731,13 @@ public class DriverManager {
                     app,
                     "BROWSERSTACK_ANDROID_APP"
             );
+
+            URL remoteUrl =
+                    getAuthenticatedBrowserStackUrl(
+                            browserStackUrl,
+                            username,
+                            accessKey
+                    );
 
             UiAutomator2Options options =
                     new UiAutomator2Options();
@@ -732,13 +765,13 @@ public class DriverManager {
                     app
             );
 
-            // BrowserStack credentials
+            // BrowserStack credentials & options
             options.setCapability(
                     "bstack:options",
                     createBrowserStackOptions(
                             username,
                             accessKey,
-                            "Bima Sugam Android"
+                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam Android"
                     )
             );
 
@@ -767,6 +800,10 @@ public class DriverManager {
             );
 
             System.out.println(
+                    "Session: " + testName
+            );
+
+            System.out.println(
                     "======================================"
             );
 
@@ -776,7 +813,7 @@ public class DriverManager {
 
             driver.set(
                     new AndroidDriver(
-                            new URL(browserStackUrl),
+                            remoteUrl,
                             options
                     )
             );
@@ -859,6 +896,81 @@ public class DriverManager {
     }
 
     // =========================================================
+    // AUTHENTICATED BROWSERSTACK HUB URL
+    // =========================================================
+
+    private static URL getAuthenticatedBrowserStackUrl(
+            String browserStackUrl,
+            String username,
+            String accessKey
+    ) throws Exception {
+
+        if (browserStackUrl == null || browserStackUrl.trim().isEmpty()) {
+            browserStackUrl = "https://hub-cloud.browserstack.com/wd/hub";
+        }
+
+        browserStackUrl = browserStackUrl.trim();
+
+        if (browserStackUrl.contains("@")) {
+            return new URL(browserStackUrl);
+        }
+
+        if (browserStackUrl.startsWith("https://")) {
+            return new URL("https://" + username + ":" + accessKey + "@" + browserStackUrl.substring(8));
+        } else if (browserStackUrl.startsWith("http://")) {
+            return new URL("http://" + username + ":" + accessKey + "@" + browserStackUrl.substring(7));
+        }
+
+        return new URL(browserStackUrl);
+    }
+
+    // =========================================================
+    // RESOLVE PROPERTY (Env > Sys Prop > config.properties)
+    // =========================================================
+
+    private static String resolveProperty(
+            String envName,
+            String configKey
+    ) {
+
+        // 1. Check System environment
+        String value = envName != null ? System.getenv(envName) : null;
+
+        // 2. Check System properties (-D)
+        if ((value == null || value.trim().isEmpty()) && envName != null) {
+            value = System.getProperty(envName);
+        }
+
+        if ((value == null || value.trim().isEmpty()) && configKey != null) {
+            value = System.getProperty(configKey);
+        }
+
+        // 3. Check config.properties
+        if ((value == null || value.trim().isEmpty()) && configKey != null) {
+            value = config.getProperty(configKey);
+        }
+
+        // 4. Resolve template placeholder like ${VAR_NAME}
+        if (value != null && value.startsWith("${") && value.endsWith("}")) {
+            String placeholder = value.substring(2, value.length() - 1).trim();
+            String resolved = System.getenv(placeholder);
+            if (resolved == null || resolved.trim().isEmpty()) {
+                resolved = System.getProperty(placeholder);
+            }
+            value = resolved;
+        }
+
+        if (value != null) {
+            value = value.trim();
+            if (value.isEmpty()) {
+                value = null;
+            }
+        }
+
+        return value;
+    }
+
+    // =========================================================
     // GET ENVIRONMENT VARIABLE
     // =========================================================
 
@@ -866,22 +978,7 @@ public class DriverManager {
             String variableName
     ) {
 
-        String value =
-                System.getenv(variableName);
-
-        // Also allow Maven/system-property override
-        if (value == null || value.trim().isEmpty()) {
-
-            value =
-                    System.getProperty(variableName);
-        }
-
-        if (value != null) {
-
-            value = value.trim();
-        }
-
-        return value;
+        return resolveProperty(variableName, null);
     }
 
     // =========================================================

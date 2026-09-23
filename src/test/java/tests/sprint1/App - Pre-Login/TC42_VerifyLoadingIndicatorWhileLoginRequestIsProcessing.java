@@ -57,8 +57,52 @@ public class TC42_VerifyLoadingIndicatorWhileLoginRequestIsProcessing
 
         step("Verify loading indicator while login request is processing");
 
-        boolean loadingIndicatorDisplayed =
-                loginPage.isLoadingIndicatorDisplayed();
+        /*
+         * Give the application a short amount of time to start
+         * the login request and display the loading indicator.
+         *
+         * The actual loading-indicator detection remains inside
+         * LoginPage.isLoadingIndicatorDisplayed().
+         */
+        boolean loadingIndicatorDisplayed = false;
+
+        long startTime = System.currentTimeMillis();
+        long timeout = 5000;
+
+        while (System.currentTimeMillis() - startTime < timeout) {
+
+            try {
+
+                if (loginPage.isLoadingIndicatorDisplayed()) {
+
+                    loadingIndicatorDisplayed = true;
+
+                    System.out.println(
+                            "Loading indicator detected."
+                    );
+
+                    break;
+                }
+
+            } catch (Exception e) {
+
+                /*
+                 * The loader may not yet exist in the UI hierarchy.
+                 * Continue polling until timeout.
+                 */
+            }
+
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        // =========================================
+        // STEP 6 - ASSERT RESULT
+        // =========================================
 
         Assert.assertTrue(
                 loadingIndicatorDisplayed,
