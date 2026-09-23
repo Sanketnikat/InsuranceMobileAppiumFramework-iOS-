@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
+public class TC37_SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
 
     private static final By BIKE_INSURANCE_SCREEN =
             AppiumBy.accessibilityId("Bike Insurance");
@@ -268,19 +268,11 @@ public class SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
 
         step("Wait for application to settle");
 
-        try {
-
-            Thread.sleep(3000);
-
-        } catch (InterruptedException e) {
-
-            Thread.currentThread().interrupt();
-
-            throw new RuntimeException(
-                    "Interrupted while waiting for application to settle.",
-                    e
-            );
-        }
+        new WebDriverWait(driver, Duration.ofSeconds(10))
+                .until(d ->
+                        !d.findElements(BIKE_INSURANCE_SCREEN).isEmpty()
+                        || !d.findElements(OTP_VERIFICATION).isEmpty()
+                );
 
         // =========================================
         // STEP 11 - CHECK FINAL SCREEN
@@ -348,9 +340,14 @@ public class SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
 
         try {
 
-            driver.executeScript(
-                    "mobile: hideKeyboard"
-            );
+            String platform = framework.ConfigReader.get("platform");
+
+            if ("ios".equalsIgnoreCase(platform)) {
+                driver.executeScript("mobile: hideKeyboard");
+            } else {
+                // Android: use HidesKeyboard interface
+                ((io.appium.java_client.HidesKeyboard) driver).hideKeyboard();
+            }
 
             System.out.println(
                     "Keyboard closed successfully."
@@ -377,13 +374,30 @@ public class SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
 
         try {
 
-            driver.executeScript(
-                    "mobile: tap",
-                    Map.of(
-                            "x", 200,
-                            "y", 150
-                    )
-            );
+            String platform = framework.ConfigReader.get("platform");
+
+            if ("ios".equalsIgnoreCase(platform)) {
+                driver.executeScript(
+                        "mobile: tap",
+                        Map.of("x", 200, "y", 150)
+                );
+            } else {
+                // Android: use W3C Actions pointer tap
+                org.openqa.selenium.interactions.PointerInput finger =
+                        new org.openqa.selenium.interactions.PointerInput(
+                                org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger"
+                        );
+                org.openqa.selenium.interactions.Sequence tap =
+                        new org.openqa.selenium.interactions.Sequence(finger, 1);
+                tap.addAction(finger.createPointerMove(
+                        java.time.Duration.ZERO,
+                        org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 200, 150));
+                tap.addAction(finger.createPointerDown(
+                        org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                tap.addAction(finger.createPointerUp(
+                        org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                driver.perform(java.util.List.of(tap));
+            }
 
             System.out.println(
                     "Safe area tapped successfully."
@@ -481,15 +495,36 @@ public class SimultaneousLoginAndBikeInsuranceTest extends BaseTest {
 
             try {
 
-                driver.executeScript(
-                        "mobile: scroll",
-                        Map.of(
-                                "direction",
-                                "down"
-                        )
-                );
+                String platform = framework.ConfigReader.get("platform");
 
-                Thread.sleep(500);
+                if ("ios".equalsIgnoreCase(platform)) {
+                    driver.executeScript(
+                            "mobile: scroll",
+                            Map.of("direction", "down")
+                    );
+                } else {
+                    // Android: W3C touch scroll
+                    org.openqa.selenium.interactions.PointerInput finger =
+                            new org.openqa.selenium.interactions.PointerInput(
+                                    org.openqa.selenium.interactions.PointerInput.Kind.TOUCH, "finger"
+                            );
+                    org.openqa.selenium.interactions.Sequence scroll =
+                            new org.openqa.selenium.interactions.Sequence(finger, 1);
+                    scroll.addAction(finger.createPointerMove(
+                            java.time.Duration.ZERO,
+                            org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 500, 700));
+                    scroll.addAction(finger.createPointerDown(
+                            org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                    scroll.addAction(finger.createPointerMove(
+                            java.time.Duration.ofMillis(600),
+                            org.openqa.selenium.interactions.PointerInput.Origin.viewport(), 500, 300));
+                    scroll.addAction(finger.createPointerUp(
+                            org.openqa.selenium.interactions.PointerInput.MouseButton.LEFT.asArg()));
+                    driver.perform(java.util.List.of(scroll));
+                }
+
+                new WebDriverWait(driver, Duration.ofSeconds(2))
+                        .until(d -> true);
 
             } catch (Exception e) {
 

@@ -30,7 +30,7 @@ public class TC42_VerifyLoadingIndicatorWhileLoginRequestIsProcessing
         step("Enter valid mobile number");
 
         loginPage.enterMobileNumber(
-                "8921639271"
+                "7263935191"
         );
 
         // =========================================
@@ -40,7 +40,7 @@ public class TC42_VerifyLoadingIndicatorWhileLoginRequestIsProcessing
         step("Enter valid date of birth");
 
         loginPage.enterDateOfBirth(
-                "01/01/1999"
+                "04/05/2000"
         );
 
         // =========================================

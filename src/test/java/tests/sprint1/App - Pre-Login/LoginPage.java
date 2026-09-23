@@ -12,6 +12,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.Map;
 
 public class LoginPage {
 
@@ -174,20 +175,12 @@ public class LoginPage {
                 "\uE003"
         );
 
-        // Allow iOS field to update
-        try {
-
-            Thread.sleep(500);
-
-        } catch (InterruptedException e) {
-
-            Thread.currentThread().interrupt();
-
-            throw new RuntimeException(
-                    "Interrupted while clearing DOB field.",
-                    e
-            );
-        }
+        // Wait until the field value is cleared before typing
+        new WebDriverWait(driver, java.time.Duration.ofSeconds(5))
+                .until(d -> {
+                    String v = field.getAttribute("value");
+                    return v == null || v.isEmpty();
+                });
 
                 // Enter masked DOB fields one character at a time so iOS does not drop input.
                 for (char character : dateOfBirth.toCharArray()) {
@@ -195,16 +188,24 @@ public class LoginPage {
                                         .sendKeys(String.valueOf(character))
                                         .perform();
 
-                        try {
-                                Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                throw new RuntimeException(
-                                                "Interrupted while entering date of birth.",
-                                                e
-                                );
-                        }
+                        // Wait until the field value grows by one character after each keystroke
+                        new WebDriverWait(driver, java.time.Duration.ofSeconds(3))
+                                .until(d -> {
+                                    String v = field.getAttribute("value");
+                                    return v != null && !v.isEmpty();
+                                });
                 }
+
+        dismissKeyboard();
+
+        // Remove focus so the form validates the completed DOB field.
+        driver.executeScript(
+                "mobile: tap",
+                Map.of(
+                        "x", 200,
+                        "y", 120
+                )
+        );
     }
 
     /**

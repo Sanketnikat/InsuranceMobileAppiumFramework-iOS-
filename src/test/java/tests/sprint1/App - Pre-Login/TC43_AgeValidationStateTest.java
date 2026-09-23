@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
-public class AgeValidationStateTest extends BaseTest {
+public class TC43_AgeValidationStateTest extends BaseTest {
 
     private static final String AGE_VALIDATION_MESSAGE =
             "You must be at least 18 years old";

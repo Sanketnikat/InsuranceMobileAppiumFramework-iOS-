@@ -49,21 +49,94 @@ public class DriverManager {
 
     public static void startDriver() {
 
+        String execution =
+                config.getProperty(
+                        "execution",
+                        "local"
+                );
+
         String platform =
                 config.getProperty("platform");
 
-        if (platform.equalsIgnoreCase("ios")) {
+        System.out.println("======================================");
+        System.out.println("EXECUTION: " + execution);
+        System.out.println("PLATFORM : " + platform);
+        System.out.println("======================================");
 
-            startIOSDriver();
+        if (platform == null || platform.trim().isEmpty()) {
 
-        } else {
+            throw new RuntimeException(
+                    "Platform is not configured in config.properties. " +
+                    "Use 'ios' or 'android'."
+            );
+        }
 
-            startAndroidDriver();
+        // =====================================================
+        // LOCAL APPIUM
+        // =====================================================
+
+        if (execution.equalsIgnoreCase("local")) {
+
+            if (platform.equalsIgnoreCase("ios")) {
+
+                startIOSDriver();
+
+            } else if (platform.equalsIgnoreCase("android")) {
+
+                startAndroidDriver();
+
+            } else {
+
+                throw new RuntimeException(
+                        "Invalid platform: "
+                                + platform
+                                + ". Use 'ios' or 'android'."
+                );
+            }
+
+        }
+
+        // =====================================================
+        // BROWSERSTACK
+        // =====================================================
+
+        else if (execution.equalsIgnoreCase("browserstack")) {
+
+            if (platform.equalsIgnoreCase("ios")) {
+
+                startBrowserStackIOSDriver();
+
+            } else if (platform.equalsIgnoreCase("android")) {
+
+                startBrowserStackAndroidDriver();
+
+            } else {
+
+                throw new RuntimeException(
+                        "Invalid platform: "
+                                + platform
+                                + ". Use 'ios' or 'android'."
+                );
+            }
+
+        }
+
+        // =====================================================
+        // INVALID EXECUTION
+        // =====================================================
+
+        else {
+
+            throw new RuntimeException(
+                    "Invalid execution: "
+                            + execution
+                            + ". Use 'local' or 'browserstack'."
+            );
         }
     }
 
     // =========================================================
-    // iOS DRIVER
+    // LOCAL iOS DRIVER
     // Supports:
     // 1. Physical iPhone
     // 2. iOS Simulator
@@ -159,7 +232,7 @@ public class DriverManager {
                 );
 
                 System.out.println(
-                        "iOS PHYSICAL DEVICE"
+                        "LOCAL iOS PHYSICAL DEVICE"
                 );
 
                 System.out.println(
@@ -223,7 +296,7 @@ public class DriverManager {
                 );
 
                 System.out.println(
-                        "iOS SIMULATOR"
+                        "LOCAL iOS SIMULATOR"
                 );
 
                 System.out.println(
@@ -257,7 +330,7 @@ public class DriverManager {
             }
 
             // =================================================
-            // COMMON iOS SETTINGS
+            // COMMON LOCAL iOS SETTINGS
             // =================================================
 
             options.setNewCommandTimeout(
@@ -267,7 +340,7 @@ public class DriverManager {
             options.setShowXcodeLog(true);
 
             // =================================================
-            // CREATE iOS DRIVER
+            // CREATE LOCAL iOS DRIVER
             // =================================================
 
             driver.set(
@@ -278,7 +351,7 @@ public class DriverManager {
             );
 
             System.out.println(
-                    "iOS Appium driver started successfully."
+                    "Local iOS Appium driver started successfully."
             );
 
             System.out.println(
@@ -291,14 +364,15 @@ public class DriverManager {
             e.printStackTrace();
 
             throw new RuntimeException(
-                    "Could not start iOS Appium driver.",
+                    "Could not start local iOS Appium driver.",
                     e
             );
         }
     }
 
     // =========================================================
-    // ANDROID DRIVER
+    // LOCAL ANDROID DRIVER
+    // Physical Android Device
     // =========================================================
 
     private static void startAndroidDriver() {
@@ -320,13 +394,22 @@ public class DriverManager {
                             "android.platform.version"
                     );
 
-            String appPath =
+            String appPackage =
                     config.getProperty(
-                            "android.app.path"
+                            "android.app.package"
+                    );
+
+            String appActivity =
+                    config.getProperty(
+                            "android.app.activity"
                     );
 
             UiAutomator2Options options =
                     new UiAutomator2Options();
+
+            // =================================================
+            // ANDROID CAPABILITIES
+            // =================================================
 
             options.setPlatformName("Android");
 
@@ -338,6 +421,12 @@ public class DriverManager {
                     deviceName
             );
 
+            // Use the connected physical device
+            options.setUdid(
+                    deviceName
+            );
+
+            // Platform version is optional
             if (platformVersion != null
                     && !platformVersion.isEmpty()) {
 
@@ -346,15 +435,38 @@ public class DriverManager {
                 );
             }
 
-            if (appPath != null
-                    && !appPath.isEmpty()) {
+            // =================================================
+            // INSTALLED ANDROID APP
+            // =================================================
 
-                options.setApp(appPath);
-            }
+            options.setAppPackage(
+                    appPackage
+            );
+
+            options.setAppActivity(
+                    appActivity
+            );
+
+            // Do not reinstall the application
+            options.setNoReset(true);
+
+            // Keep application data
+            options.setFullReset(false);
+
+            // Automatically grant permissions where possible
+            options.setAutoGrantPermissions(true);
+
+            // =================================================
+            // COMMAND TIMEOUT
+            // =================================================
 
             options.setNewCommandTimeout(
                     Duration.ofSeconds(120)
             );
+
+            // =================================================
+            // CREATE ANDROID DRIVER
+            // =================================================
 
             driver.set(
                     new AndroidDriver(
@@ -364,12 +476,35 @@ public class DriverManager {
             );
 
             System.out.println(
-                    "Android Appium driver started successfully."
+                    "======================================"
             );
 
             System.out.println(
-                    "Android Device: "
-                            + deviceName
+                    "LOCAL ANDROID PHYSICAL DEVICE"
+            );
+
+            System.out.println(
+                    "Device: " + deviceName
+            );
+
+            System.out.println(
+                    "Package: " + appPackage
+            );
+
+            System.out.println(
+                    "Activity: " + appActivity
+            );
+
+            System.out.println(
+                    "Automation: UiAutomator2"
+            );
+
+            System.out.println(
+                    "======================================"
+            );
+
+            System.out.println(
+                    "Local Android Appium driver started successfully."
             );
 
         } catch (Exception e) {
@@ -377,8 +512,424 @@ public class DriverManager {
             e.printStackTrace();
 
             throw new RuntimeException(
-                    "Could not start Android Appium driver.",
+                    "Could not start local Android Appium driver.",
                     e
+            );
+        }
+    }
+
+    // =========================================================
+    // BROWSERSTACK iOS DRIVER
+    // =========================================================
+
+    private static void startBrowserStackIOSDriver() {
+
+        try {
+
+            String username =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_USERNAME"
+                    );
+
+            String accessKey =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_ACCESS_KEY"
+                    );
+
+            String browserStackUrl =
+                    config.getProperty(
+                            "browserstack.url",
+                            "https://hub-cloud.browserstack.com/wd/hub"
+                    );
+
+            String deviceName =
+                    config.getProperty(
+                            "browserstack.ios.device"
+                    );
+
+            String platformVersion =
+                    config.getProperty(
+                            "browserstack.ios.platform.version"
+                    );
+
+            String app =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_IOS_APP"
+                    );
+
+            validateBrowserStackCredentials(
+                    username,
+                    accessKey
+            );
+
+            validateBrowserStackApp(
+                    app,
+                    "BROWSERSTACK_IOS_APP"
+            );
+
+            XCUITestOptions options =
+                    new XCUITestOptions();
+
+            // =================================================
+            // BROWSERSTACK iOS CAPABILITIES
+            // =================================================
+
+            options.setPlatformName("iOS");
+
+            options.setAutomationName(
+                    "XCUITest"
+            );
+
+            options.setDeviceName(
+                    deviceName
+            );
+
+            options.setPlatformVersion(
+                    platformVersion
+            );
+
+            options.setCapability(
+                    "appium:app",
+                    app
+            );
+
+            // BrowserStack credentials
+            options.setCapability(
+                    "bstack:options",
+                    createBrowserStackOptions(
+                            username,
+                            accessKey,
+                            "Bima Sugam iOS"
+                    )
+            );
+
+            options.setNewCommandTimeout(
+                    Duration.ofSeconds(120)
+            );
+
+            System.out.println(
+                    "======================================"
+            );
+
+            System.out.println(
+                    "BROWSERSTACK iOS"
+            );
+
+            System.out.println(
+                    "Device: " + deviceName
+            );
+
+            System.out.println(
+                    "iOS Version: " + platformVersion
+            );
+
+            System.out.println(
+                    "App: " + app
+            );
+
+            System.out.println(
+                    "======================================"
+            );
+
+            // =================================================
+            // CREATE BROWSERSTACK iOS DRIVER
+            // =================================================
+
+            driver.set(
+                    new IOSDriver(
+                            new URL(browserStackUrl),
+                            options
+                    )
+            );
+
+            System.out.println(
+                    "BrowserStack iOS driver started successfully."
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw new RuntimeException(
+                    "Could not start BrowserStack iOS driver.",
+                    e
+            );
+        }
+    }
+
+    // =========================================================
+    // BROWSERSTACK ANDROID DRIVER
+    // =========================================================
+
+    private static void startBrowserStackAndroidDriver() {
+
+        try {
+
+            String username =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_USERNAME"
+                    );
+
+            String accessKey =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_ACCESS_KEY"
+                    );
+
+            String browserStackUrl =
+                    config.getProperty(
+                            "browserstack.url",
+                            "https://hub-cloud.browserstack.com/wd/hub"
+                    );
+
+            String deviceName =
+                    config.getProperty(
+                            "browserstack.android.device"
+                    );
+
+            String platformVersion =
+                    config.getProperty(
+                            "browserstack.android.platform.version"
+                    );
+
+            String app =
+                    getEnvironmentVariable(
+                            "BROWSERSTACK_ANDROID_APP"
+                    );
+
+            validateBrowserStackCredentials(
+                    username,
+                    accessKey
+            );
+
+            validateBrowserStackApp(
+                    app,
+                    "BROWSERSTACK_ANDROID_APP"
+            );
+
+            UiAutomator2Options options =
+                    new UiAutomator2Options();
+
+            // =================================================
+            // BROWSERSTACK ANDROID CAPABILITIES
+            // =================================================
+
+            options.setPlatformName("Android");
+
+            options.setAutomationName(
+                    "UiAutomator2"
+            );
+
+            options.setDeviceName(
+                    deviceName
+            );
+
+            options.setPlatformVersion(
+                    platformVersion
+            );
+
+            options.setCapability(
+                    "appium:app",
+                    app
+            );
+
+            // BrowserStack credentials
+            options.setCapability(
+                    "bstack:options",
+                    createBrowserStackOptions(
+                            username,
+                            accessKey,
+                            "Bima Sugam Android"
+                    )
+            );
+
+            options.setNewCommandTimeout(
+                    Duration.ofSeconds(120)
+            );
+
+            System.out.println(
+                    "======================================"
+            );
+
+            System.out.println(
+                    "BROWSERSTACK ANDROID"
+            );
+
+            System.out.println(
+                    "Device: " + deviceName
+            );
+
+            System.out.println(
+                    "Android Version: " + platformVersion
+            );
+
+            System.out.println(
+                    "App: " + app
+            );
+
+            System.out.println(
+                    "======================================"
+            );
+
+            // =================================================
+            // CREATE BROWSERSTACK ANDROID DRIVER
+            // =================================================
+
+            driver.set(
+                    new AndroidDriver(
+                            new URL(browserStackUrl),
+                            options
+                    )
+            );
+
+            System.out.println(
+                    "BrowserStack Android driver started successfully."
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw new RuntimeException(
+                    "Could not start BrowserStack Android driver.",
+                    e
+            );
+        }
+    }
+
+    // =========================================================
+    // BROWSERSTACK OPTIONS
+    // =========================================================
+
+    private static java.util.Map<String, Object>
+    createBrowserStackOptions(
+            String username,
+            String accessKey,
+            String testName
+    ) {
+
+        java.util.Map<String, Object> options =
+                new java.util.HashMap<>();
+
+        options.put(
+                "userName",
+                username
+        );
+
+        options.put(
+                "accessKey",
+                accessKey
+        );
+
+        options.put(
+                "projectName",
+                "Insurance Mobile Appium Framework"
+        );
+
+        options.put(
+                "buildName",
+                "Bima Sugam Mobile Build"
+        );
+
+        options.put(
+                "sessionName",
+                testName
+        );
+
+        options.put(
+                "debug",
+                true
+        );
+
+        options.put(
+                "networkLogs",
+                true
+        );
+
+        options.put(
+                "video",
+                true
+        );
+
+        options.put(
+                "deviceLogs",
+                true
+        );
+
+        return options;
+    }
+
+    // =========================================================
+    // GET ENVIRONMENT VARIABLE
+    // =========================================================
+
+    private static String getEnvironmentVariable(
+            String variableName
+    ) {
+
+        String value =
+                System.getenv(variableName);
+
+        // Also allow Maven/system-property override
+        if (value == null || value.trim().isEmpty()) {
+
+            value =
+                    System.getProperty(variableName);
+        }
+
+        if (value != null) {
+
+            value = value.trim();
+        }
+
+        return value;
+    }
+
+    // =========================================================
+    // VALIDATE BROWSERSTACK CREDENTIALS
+    // =========================================================
+
+    private static void validateBrowserStackCredentials(
+            String username,
+            String accessKey
+    ) {
+
+        if (username == null
+                || username.isEmpty()) {
+
+            throw new RuntimeException(
+                    "BROWSERSTACK_USERNAME is not set. " +
+                    "Please export BROWSERSTACK_USERNAME."
+            );
+        }
+
+        if (accessKey == null
+                || accessKey.isEmpty()) {
+
+            throw new RuntimeException(
+                    "BROWSERSTACK_ACCESS_KEY is not set. " +
+                    "Please export BROWSERSTACK_ACCESS_KEY."
+            );
+        }
+    }
+
+    // =========================================================
+    // VALIDATE BROWSERSTACK APP
+    // =========================================================
+
+    private static void validateBrowserStackApp(
+            String app,
+            String environmentVariableName
+    ) {
+
+        if (app == null
+                || app.isEmpty()) {
+
+            throw new RuntimeException(
+                    environmentVariableName
+                            + " is not set.\n"
+                            + "Upload/select the application in "
+                            + "BrowserStack and set the corresponding "
+                            + "bs:// App ID."
             );
         }
     }

@@ -11,7 +11,7 @@ import org.testng.annotations.Test;
 
 import java.time.Duration;
 
-public class MobileNumberValidationTest extends BaseTest {
+public class TC43_MobileNumberValidationTest extends BaseTest {
 
     @Test(
     description = "BD2M-673 - TC02 - Mobile number accepts a maximum of 10 digits",

@@ -1,18 +1,49 @@
-userName: ${programsanketn_U2nWIV}
-accessKey: ${CNJkVGT8CspJRjtpd6Ln}
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
 
 framework: testng
 
-app: bs://YOUR_APP_ID
-
 platforms:
+
+  # ==========================================
+  # iOS - Lower End / Older Device
+  # ==========================================
+  - platformName: ios
+    deviceName: iPhone 13
+    platformVersion: "18"
+    app: ${BROWSERSTACK_IOS_APP}
+
+  # ==========================================
+  # iOS - High End / Flagship
+  # ==========================================
   - platformName: ios
     deviceName: iPhone 17 Pro
-    platformVersion: "26.5"
+    platformVersion: "26"
+    app: ${BROWSERSTACK_IOS_APP}
+
+  # ==========================================
+  # Android - Lower End / Older Device
+  # ==========================================
+  - platformName: android
+    deviceName: Samsung Galaxy M32
+    platformVersion: "11.0"
+    app: ${BROWSERSTACK_ANDROID_APP}
+
+  # ==========================================
+  # Android - High End / Flagship
+  # ==========================================
+  - platformName: android
+    deviceName: Samsung Galaxy S24 Ultra
+    platformVersion: "14.0"
+    app: ${BROWSERSTACK_ANDROID_APP}
+
+# ==========================================
+# BrowserStack Configuration
+# ==========================================
 
 browserstackLocal: false
 
-buildName: "Bima Sugam iOS Build"
+buildName: "Bima Sugam Mobile Build"
 projectName: "Insurance Mobile Appium Framework"
 
 debug: true

@@ -5,10 +5,9 @@
         <parameter name="otp" value="123456"/>
 
         <classes>
-            <class name="tests.sprint1.LoginTest"/>
-            <class name="tests.sprint1.MobileNumberValidationTest"/>
-            <class name="tests.sprint1.AgeValidationStateTest"/>
-            <class name="tests.sprint1.SimultaneousLoginAndBikeInsuranceTest"/>
+            <class name="tests.sprint1.TC43_MobileNumberValidationTest"/>
+            <class name="tests.sprint1.TC43_AgeValidationStateTest"/>
+            <class name="tests.sprint1.TC37_SimultaneousLoginAndBikeInsuranceTest"/>
             <class name="tests.sprint1.TC05_ValidIndianMobileNumberTest"/>
             <class name="tests.sprint1.TC06_InvalidIndianMobileNumberTest"/>
             <class name="tests.sprint1.TC14_LoginViaOtpDisabledUntilValidDetailsTest"/>
