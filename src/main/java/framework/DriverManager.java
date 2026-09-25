@@ -5,6 +5,10 @@ import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.ios.options.XCUITestOptions;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.safari.SafariOptions;
 
 import java.io.FileInputStream;
 import java.net.URL;
@@ -13,8 +17,11 @@ import java.util.Properties;
 
 public class DriverManager {
 
-    private static final ThreadLocal<AppiumDriver> driver =
+        private static final ThreadLocal<AppiumDriver> driver =
             new ThreadLocal<>();
+
+            private static final ThreadLocal<WebDriver> sessionDriver =
+                    new ThreadLocal<>();
 
     private static Properties config;
 
@@ -24,18 +31,28 @@ public class DriverManager {
 
     static {
         try {
-
             config = new Properties();
 
-            FileInputStream file = new FileInputStream(
-                    "src/test/resources/config.properties"
-            );
+            java.io.InputStream input = null;
+            try {
+                input = DriverManager.class.getResourceAsStream("/config.properties");
+                if (input == null) {
+                    input = new FileInputStream("src/test/resources/config.properties");
+                }
+                if (input != null) {
+                    config.load(input);
+                }
+            } finally {
+                if (input != null) {
+                    input.close();
+                }
+            }
 
-            config.load(file);
-            file.close();
+            if (config.isEmpty()) {
+                throw new RuntimeException("config.properties is empty or not found.");
+            }
 
         } catch (Exception e) {
-
             throw new RuntimeException(
                     "Could not load config.properties",
                     e
@@ -52,6 +69,42 @@ public class DriverManager {
     }
 
     public static void startDriver(String testName) {
+                startDriver(testName, "mixed-sprint");
+        }
+
+        public static void startDriver(String testName, String sprint) {
+                startDriver(testName, sprint, null, null, null, null);
+            }
+
+            public static void startDriver(
+                    String testName,
+                    String sprint,
+                    String platformOverride,
+                    String deviceNameOverride,
+                    String platformVersionOverride,
+                    String appOverride
+            ) {
+
+                startDriver(
+                        testName,
+                        sprint,
+                        platformOverride,
+                        deviceNameOverride,
+                        platformVersionOverride,
+                        appOverride,
+                        null
+                );
+            }
+
+            public static void startDriver(
+                    String testName,
+                    String sprint,
+                    String platformOverride,
+                    String deviceNameOverride,
+                    String platformVersionOverride,
+                    String appOverride,
+                    String executionTypeOverride
+            ) {
 
         String execution =
                 config.getProperty(
@@ -59,11 +112,27 @@ public class DriverManager {
                         "local"
                 );
 
-        String platform =
-                config.getProperty("platform");
+                String executionType = firstConfiguredValue(
+                        executionTypeOverride,
+                        value("executionType", "")
+                );
+
+                if (executionType != null && !executionType.isBlank()) {
+                    if (executionType.equalsIgnoreCase("PWA_ANDROID")) {
+                        platformOverride = "android";
+                    } else if (executionType.equalsIgnoreCase("PWA_IOS")) {
+                        platformOverride = "ios";
+                    }
+                }
+
+        String platform = firstConfiguredValue(platformOverride, "platform");
+        if (platform != null && (platform.equalsIgnoreCase("platform") || platform.equalsIgnoreCase("deviceName") || platform.equalsIgnoreCase("platformVersion") || platform.equalsIgnoreCase("app"))) {
+            platform = value("platform", null);
+        }
 
         System.out.println("======================================");
         System.out.println("EXECUTION: " + execution);
+        System.out.println("EXECUTION TYPE: " + (executionType == null || executionType.isBlank() ? "NATIVE_APP" : executionType));
         System.out.println("PLATFORM : " + platform);
         System.out.println("TEST NAME: " + testName);
         System.out.println("======================================");
@@ -80,7 +149,15 @@ public class DriverManager {
         // LOCAL APPIUM
         // =====================================================
 
-        if (execution.equalsIgnoreCase("local")) {
+                if (executionType != null && executionType.equalsIgnoreCase("PWA_ANDROID")) {
+                        requireBrowserStack(execution);
+                        startBrowserStackPwaAndroidDriver(testName, sprint, deviceNameOverride, platformVersionOverride);
+
+                } else if (executionType != null && executionType.equalsIgnoreCase("PWA_IOS")) {
+                        requireBrowserStack(execution);
+                        startBrowserStackPwaIosDriver(testName, sprint, deviceNameOverride, platformVersionOverride);
+
+                } else if (execution.equalsIgnoreCase("local")) {
 
             if (platform.equalsIgnoreCase("ios")) {
 
@@ -109,11 +186,23 @@ public class DriverManager {
 
             if (platform.equalsIgnoreCase("ios")) {
 
-                startBrowserStackIOSDriver(testName);
+                startBrowserStackIOSDriver(
+                        testName,
+                        sprint,
+                        deviceNameOverride,
+                        platformVersionOverride,
+                        appOverride
+                );
 
             } else if (platform.equalsIgnoreCase("android")) {
 
-                startBrowserStackAndroidDriver(testName);
+                startBrowserStackAndroidDriver(
+                        testName,
+                        sprint,
+                        deviceNameOverride,
+                        platformVersionOverride,
+                        appOverride
+                );
 
             } else {
 
@@ -527,7 +616,13 @@ public class DriverManager {
     // BROWSERSTACK iOS DRIVER
     // =========================================================
 
-    private static void startBrowserStackIOSDriver(String testName) {
+            private static void startBrowserStackIOSDriver(
+                    String testName,
+                    String sprint,
+                    String deviceNameOverride,
+                    String platformVersionOverride,
+                    String appOverride
+            ) {
 
         try {
 
@@ -549,23 +644,29 @@ public class DriverManager {
                             "https://hub-cloud.browserstack.com/wd/hub"
                     );
 
-            String deviceName =
+            String deviceName = firstConfiguredValue(
+                    deviceNameOverride,
                     resolveProperty(
                             "BROWSERSTACK_IOS_DEVICE",
                             "browserstack.ios.device"
-                    );
+                    )
+            );
 
-            String platformVersion =
+            String platformVersion = firstConfiguredValue(
+                    platformVersionOverride,
                     resolveProperty(
                             "BROWSERSTACK_IOS_PLATFORM_VERSION",
                             "browserstack.ios.platform.version"
-                    );
+                    )
+            );
 
-            String app =
+            String app = firstConfiguredValue(
+                    appOverride,
                     resolveProperty(
                             "BROWSERSTACK_IOS_APP",
                             "browserstack.ios.app"
-                    );
+                    )
+            );
 
             validateBrowserStackCredentials(
                     username,
@@ -613,10 +714,11 @@ public class DriverManager {
             // BrowserStack credentials & options
             options.setCapability(
                     "bstack:options",
-                    createBrowserStackOptions(
+                            createBrowserStackOptions(
                             username,
                             accessKey,
-                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam iOS"
+                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam iOS",
+                            sprint
                     )
             );
 
@@ -682,7 +784,13 @@ public class DriverManager {
     // BROWSERSTACK ANDROID DRIVER
     // =========================================================
 
-    private static void startBrowserStackAndroidDriver(String testName) {
+        private static void startBrowserStackAndroidDriver(
+                String testName,
+                String sprint,
+                String deviceNameOverride,
+                String platformVersionOverride,
+                String appOverride
+        ) {
 
         try {
 
@@ -704,23 +812,29 @@ public class DriverManager {
                             "https://hub-cloud.browserstack.com/wd/hub"
                     );
 
-            String deviceName =
+            String deviceName = firstConfiguredValue(
+                    deviceNameOverride,
                     resolveProperty(
                             "BROWSERSTACK_ANDROID_DEVICE",
                             "browserstack.android.device"
-                    );
+                    )
+            );
 
-            String platformVersion =
+            String platformVersion = firstConfiguredValue(
+                    platformVersionOverride,
                     resolveProperty(
                             "BROWSERSTACK_ANDROID_PLATFORM_VERSION",
                             "browserstack.android.platform.version"
-                    );
+                    )
+            );
 
-            String app =
+            String app = firstConfiguredValue(
+                    appOverride,
                     resolveProperty(
                             "BROWSERSTACK_ANDROID_APP",
                             "browserstack.android.app"
-                    );
+                    )
+            );
 
             validateBrowserStackCredentials(
                     username,
@@ -768,10 +882,11 @@ public class DriverManager {
             // BrowserStack credentials & options
             options.setCapability(
                     "bstack:options",
-                    createBrowserStackOptions(
+                            createBrowserStackOptions(
                             username,
                             accessKey,
-                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam Android"
+                            testName != null && !testName.isEmpty() ? testName : "Bima Sugam Android",
+                            sprint
                     )
             );
 
@@ -833,6 +948,140 @@ public class DriverManager {
         }
     }
 
+    private static void startBrowserStackPwaAndroidDriver(
+            String testName,
+            String sprint,
+            String deviceNameOverride,
+            String platformVersionOverride
+    ) {
+        try {
+            String username = resolveProperty("BROWSERSTACK_USERNAME", "browserstack.username");
+            String accessKey = resolveProperty("BROWSERSTACK_ACCESS_KEY", "browserstack.access.key");
+            String browserStackUrl = config.getProperty(
+                    "browserstack.url",
+                    "https://hub-cloud.browserstack.com/wd/hub"
+            );
+            String deviceName = firstConfiguredValue(
+                    deviceNameOverride,
+                    resolveProperty("BROWSERSTACK_PWA_ANDROID_DEVICE", "pwa.android.device")
+            );
+            String platformVersion = firstConfiguredValue(
+                    platformVersionOverride,
+                    resolveProperty("BROWSERSTACK_PWA_ANDROID_PLATFORM_VERSION", "pwa.android.platform.version")
+            );
+
+            validateBrowserStackCredentials(username, accessKey);
+
+            URL remoteUrl = getAuthenticatedBrowserStackUrl(browserStackUrl, username, accessKey);
+            ChromeOptions options = new ChromeOptions();
+            options.setCapability("browserName", "Chrome");
+            options.setCapability(
+                    "bstack:options",
+                    createBrowserStackBrowserOptions(
+                            username,
+                            accessKey,
+                            testName,
+                            sprint,
+                            "android",
+                            deviceName,
+                            platformVersion
+                    )
+            );
+            sessionDriver.set(new RemoteWebDriver(remoteUrl, options));
+            navigateToPwa("PWA_ANDROID", testName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Could not start BrowserStack Android PWA driver.", e);
+        }
+    }
+
+    private static void startBrowserStackPwaIosDriver(
+            String testName,
+            String sprint,
+            String deviceNameOverride,
+            String platformVersionOverride
+    ) {
+        try {
+            String username = resolveProperty("BROWSERSTACK_USERNAME", "browserstack.username");
+            String accessKey = resolveProperty("BROWSERSTACK_ACCESS_KEY", "browserstack.access.key");
+            String browserStackUrl = config.getProperty(
+                    "browserstack.url",
+                    "https://hub-cloud.browserstack.com/wd/hub"
+            );
+            String deviceName = firstConfiguredValue(
+                    deviceNameOverride,
+                    resolveProperty("BROWSERSTACK_PWA_IOS_DEVICE", "pwa.ios.device")
+            );
+            String platformVersion = firstConfiguredValue(
+                    platformVersionOverride,
+                    resolveProperty("BROWSERSTACK_PWA_IOS_PLATFORM_VERSION", "pwa.ios.platform.version")
+            );
+
+            validateBrowserStackCredentials(username, accessKey);
+
+            URL remoteUrl = getAuthenticatedBrowserStackUrl(browserStackUrl, username, accessKey);
+            SafariOptions options = new SafariOptions();
+            options.setCapability("browserName", "Safari");
+            options.setCapability(
+                    "bstack:options",
+                    createBrowserStackBrowserOptions(
+                            username,
+                            accessKey,
+                            testName,
+                            sprint,
+                            "ios",
+                            deviceName,
+                            platformVersion
+                    )
+            );
+
+            sessionDriver.set(new RemoteWebDriver(remoteUrl, options));
+            navigateToPwa("PWA_IOS", testName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Could not start BrowserStack iOS PWA driver.", e);
+        }
+    }
+
+    private static java.util.Map<String, Object> createBrowserStackBrowserOptions(
+            String username,
+            String accessKey,
+            String testName,
+            String sprint,
+            String os,
+            String deviceName,
+            String platformVersion
+    ) {
+        java.util.Map<String, Object> options = createBrowserStackOptions(
+                username,
+                accessKey,
+                testName,
+                sprint
+        );
+        options.put("deviceName", deviceName);
+        options.put("os", os);
+        options.put("osVersion", platformVersion);
+        return options;
+    }
+
+    private static void navigateToPwa(String executionType, String testName) {
+        String pwaUrl = value(
+                "pwa.url",
+                "https://marketplace-test.bsifinternal.com/#/login"
+        );
+        driver.get().get(pwaUrl);
+        System.out.println("BrowserStack " + executionType + " session started: " + testName);
+        System.out.println("PWA URL: " + pwaUrl);
+    }
+
+    private static void requireBrowserStack(String execution) {
+        if (!"browserstack".equalsIgnoreCase(execution)) {
+            throw new RuntimeException(
+                    "PWA execution requires execution=browserstack because the PWA is configured for BrowserStack mobile web sessions."
+            );
+        }
+    }
+
     // =========================================================
     // BROWSERSTACK OPTIONS
     // =========================================================
@@ -841,7 +1090,8 @@ public class DriverManager {
     createBrowserStackOptions(
             String username,
             String accessKey,
-            String testName
+            String testName,
+            String sprint
     ) {
 
         java.util.Map<String, Object> options =
@@ -859,13 +1109,26 @@ public class DriverManager {
 
         options.put(
                 "projectName",
-                "Insurance Mobile Appium Framework"
+                value("projectName", "Bima-Sugam-Mobile")
         );
+
+        String configuredBuildName = value("buildName", "");
+        String buildName = configuredBuildName.isEmpty()
+                ? "Sprint-" + sprint
+                : configuredBuildName;
 
         options.put(
                 "buildName",
-                "Bima Sugam Mobile Build"
+                buildName
         );
+
+        String buildTag = System.getenv("BSTACK_BUILD_TAG");
+        if (buildTag == null || buildTag.trim().isEmpty()) {
+            buildTag = value("buildTag", "");
+        }
+        if (!buildTag.isEmpty()) {
+            options.put("buildTag", buildTag);
+        }
 
         options.put(
                 "sessionName",
@@ -892,8 +1155,56 @@ public class DriverManager {
                 true
         );
 
+        String networkProfile = value("networkProfile", "");
+        if (!networkProfile.isEmpty()) {
+            options.put("networkProfile", networkProfile);
+        }
+
+        String local = resolveProperty("BROWSERSTACK_LOCAL", "browserstack.local");
+        if (local != null && Boolean.parseBoolean(local.trim())) {
+            options.put("local", true);
+
+            String localIdentifier = resolveProperty("BROWSERSTACK_LOCAL_IDENTIFIER", "browserstack.local.identifier");
+            if (localIdentifier != null && !localIdentifier.isEmpty()) {
+                options.put("localIdentifier", localIdentifier);
+            }
+        }
+
         return options;
     }
+
+        private static String value(String key, String defaultValue) {
+                String value = System.getProperty(key);
+                if (value == null || value.trim().isEmpty()) {
+                        value = config.getProperty(key);
+                }
+                return value == null || value.trim().isEmpty() ? defaultValue : value.trim();
+        }
+
+        private static String firstConfiguredValue(String override, String fallback) {
+                String candidate = override;
+
+                if (candidate == null || candidate.trim().isEmpty() || candidate.equalsIgnoreCase("null")) {
+                        candidate = fallback;
+                } else {
+                        String trimmed = candidate.trim();
+                        if (trimmed.equalsIgnoreCase("platform")
+                                || trimmed.equalsIgnoreCase("deviceName")
+                                || trimmed.equalsIgnoreCase("platformVersion")
+                                || trimmed.equalsIgnoreCase("app")
+                                || trimmed.equalsIgnoreCase(fallback == null ? "" : fallback)) {
+                                candidate = fallback;
+                        } else {
+                                candidate = trimmed;
+                        }
+                }
+
+                if (candidate == null || candidate.trim().isEmpty()) {
+                        return null;
+                }
+
+                return candidate.trim();
+        }
 
     // =========================================================
     // AUTHENTICATED BROWSERSTACK HUB URL
@@ -933,41 +1244,52 @@ public class DriverManager {
             String configKey
     ) {
 
-        // 1. Check System environment
-        String value = envName != null ? System.getenv(envName) : null;
+        java.util.List<String> candidateKeys = new java.util.ArrayList<>();
 
-        // 2. Check System properties (-D)
-        if ((value == null || value.trim().isEmpty()) && envName != null) {
-            value = System.getProperty(envName);
+        if (envName != null) {
+            candidateKeys.add(envName);
+            candidateKeys.add(envName.toUpperCase());
+            candidateKeys.add(envName.toLowerCase());
+            candidateKeys.add(envName.replace('_', '.'));
         }
 
-        if ((value == null || value.trim().isEmpty()) && configKey != null) {
-            value = System.getProperty(configKey);
+        if (configKey != null) {
+            candidateKeys.add(configKey);
+            candidateKeys.add(configKey.toUpperCase());
+            candidateKeys.add(configKey.toLowerCase());
+            candidateKeys.add(configKey.replace('.', '_'));
         }
 
-        // 3. Check config.properties
-        if ((value == null || value.trim().isEmpty()) && configKey != null) {
-            value = config.getProperty(configKey);
-        }
-
-        // 4. Resolve template placeholder like ${VAR_NAME}
-        if (value != null && value.startsWith("${") && value.endsWith("}")) {
-            String placeholder = value.substring(2, value.length() - 1).trim();
-            String resolved = System.getenv(placeholder);
-            if (resolved == null || resolved.trim().isEmpty()) {
-                resolved = System.getProperty(placeholder);
+        for (String candidate : candidateKeys) {
+            if (candidate == null || candidate.trim().isEmpty()) {
+                continue;
             }
-            value = resolved;
-        }
 
-        if (value != null) {
-            value = value.trim();
-            if (value.isEmpty()) {
-                value = null;
+            String value = System.getenv(candidate);
+            if (value == null || value.trim().isEmpty()) {
+                value = System.getProperty(candidate);
+            }
+            if (value == null || value.trim().isEmpty()) {
+                value = config.getProperty(candidate);
+            }
+
+            if (value != null && !value.trim().isEmpty()) {
+                value = value.trim();
+                if (value.startsWith("${") && value.endsWith("}")) {
+                    String placeholder = value.substring(2, value.length() - 1).trim();
+                    String resolved = System.getenv(placeholder);
+                    if (resolved == null || resolved.trim().isEmpty()) {
+                        resolved = System.getProperty(placeholder);
+                    }
+                    if (resolved != null && !resolved.trim().isEmpty()) {
+                        value = resolved.trim();
+                    }
+                }
+                return value;
             }
         }
 
-        return value;
+        return null;
     }
 
     // =========================================================
@@ -1035,10 +1357,15 @@ public class DriverManager {
     // GET DRIVER
     // =========================================================
 
-    public static AppiumDriver getDriver() {
+        public static AppiumDriver getDriver() {
 
         return driver.get();
     }
+
+        public static WebDriver getSessionDriver() {
+                WebDriver activeSession = sessionDriver.get();
+                return activeSession != null ? activeSession : driver.get();
+        }
 
     // =========================================================
     // QUIT DRIVER
@@ -1046,17 +1373,18 @@ public class DriverManager {
 
     public static void quitDriver() {
 
-        if (driver.get() != null) {
+                WebDriver activeSession = sessionDriver.get();
+                if (activeSession != null) {
 
             try {
-
-                driver.get().quit();
+                                activeSession.quit();
 
             } finally {
-
-                driver.remove();
+                                sessionDriver.remove();
             }
         }
+
+                driver.remove();
     }
 
     // =========================================================

@@ -3,6 +3,7 @@ package framework;
 import io.appium.java_client.AppiumDriver;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -14,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 public final class ScreenshotUtils {
     private ScreenshotUtils() {}
 
-    public static String capture(AppiumDriver driver, String testName) {
+    public static String capture(WebDriver driver, String testName) {
         try {
             PathHelper.ensureDirectory("screenshots");
 

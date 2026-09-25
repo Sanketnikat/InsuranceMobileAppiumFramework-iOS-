@@ -1,54 +1,58 @@
-userName: programsanketn_U2nWIV
-accessKey: CNJkVGT8CspJRjtpd6Ln
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
 
 framework: testng
 
+# ==========================================
+# PROJECT
+# ==========================================
+
+projectName: "Bima-Sugam-Mobile"
+
+# ==========================================
+# SPRINT
+# ==========================================
+
+buildName: "${BSTACK_BUILD_NAME}"
+buildTag: "${BSTACK_BUILD_TAG}"
+
+# ==========================================
+# 4 PARALLEL DEVICES
+# ==========================================
+
 platforms:
 
-  # ==========================================
-  # iOS - Lower End / Older Device
-  # ==========================================
+  # iOS - Older
   - platformName: ios
     deviceName: iPhone 13
     platformVersion: "18"
-    app: bs://90565391cf7d734c3b9017acf02ec70c452b22d2
 
-  # ==========================================
-  # iOS - High End / Flagship
-  # ==========================================
+  # iOS - Flagship
   - platformName: ios
     deviceName: iPhone 17 Pro
     platformVersion: "26"
-    app: bs://90565391cf7d734c3b9017acf02ec70c452b22d2
 
-  # ==========================================
-  # Android - Lower End / Older Device
-  # ==========================================
+  # Android - Older
   - platformName: android
     deviceName: Samsung Galaxy M32
     platformVersion: "11.0"
-    app: bs://bb48ac2ba94a530eb75306bbcee9f8a8c3dda0f7
 
-  # ==========================================
-  # Android - High End / Flagship
-  # ==========================================
+  # Android - Flagship
   - platformName: android
     deviceName: Samsung Galaxy S24 Ultra
     platformVersion: "14.0"
-    app: bs://bb48ac2ba94a530eb75306bbcee9f8a8c3dda0f7
 
 # ==========================================
-# BrowserStack Configuration
+# BROWSERSTACK SETTINGS
 # ==========================================
 
-browserstackLocal: false
+browserstackLocal: true
 
-buildName: "Bima Sugam Mobile Build"
-projectName: "Insurance Mobile Appium Framework"
+browserStackLocalOptions:
+  forcelocal: true
 
 debug: true
 networkLogs: true
 video: true
 deviceLogs: true
-
 testObservability: true

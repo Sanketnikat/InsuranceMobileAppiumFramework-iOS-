@@ -30,6 +30,12 @@
         <!-- Extent Reports -->
         <extent.version>5.1.2</extent.version>
 
+        <!-- BrowserStack SDK -->
+        <browserstack.sdk.version>1.74.2</browserstack.sdk.version>
+
+        <!-- TestNG suite; the matrix runner overrides this property. -->
+        <testng.suiteXmlFile>testng.xml</testng.suiteXmlFile>
+
     </properties>
 
     <dependencies>
@@ -55,6 +61,13 @@
             <version>${testng.version}</version>
         </dependency>
 
+        <!-- JUnit 4 -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+        </dependency>
+
         <!-- Allure TestNG -->
         <dependency>
             <groupId>io.qameta.allure</groupId>
@@ -67,6 +80,13 @@
             <groupId>com.aventstack</groupId>
             <artifactId>extentreports</artifactId>
             <version>${extent.version}</version>
+        </dependency>
+
+        <!-- BrowserStack SDK -->
+        <dependency>
+            <groupId>com.browserstack</groupId>
+            <artifactId>browserstack-java-sdk</artifactId>
+            <version>${browserstack.sdk.version}</version>
         </dependency>
 
     </dependencies>
@@ -96,7 +116,7 @@
 
                     <!-- TestNG Suite -->
                     <suiteXmlFiles>
-                        <suiteXmlFile>testng.xml</suiteXmlFile>
+                        <suiteXmlFile>${testng.suiteXmlFile}</suiteXmlFile>
                     </suiteXmlFiles>
 
                     <!-- Allure Results -->

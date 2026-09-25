@@ -11,6 +11,9 @@
             <class name="tests.sprint1.TC05_ValidIndianMobileNumberTest"/>
             <class name="tests.sprint1.TC06_InvalidIndianMobileNumberTest"/>
             <class name="tests.sprint1.TC14_LoginViaOtpDisabledUntilValidDetailsTest"/>
+            <class name="tests.sprint5.bd2m609.TS_01_TC_001_ProposalSummaryConsentTest"/>
+            <class name="tests.sprint5.bd2m609.TS_01_TC_002_ProposalDraftLoadingSkeletonTest"/>
+            <class name="tests.sprint5.bd2m609.TS_01_TC_003_ProposalDraftPopulatedReviewCardTest"/>
         </classes>
 
     </test>

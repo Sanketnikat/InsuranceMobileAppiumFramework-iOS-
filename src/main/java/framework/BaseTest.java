@@ -4,6 +4,7 @@ import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
 import io.appium.java_client.AppiumDriver;
 import io.qameta.allure.Allure;
+import org.openqa.selenium.WebDriver;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -18,6 +19,8 @@ public abstract class BaseTest {
 
     protected AppiumDriver driver;
 
+    protected WebDriver sessionDriver;
+
     protected VideoRecorder videoRecorder;
 
     private final Map<String, ExtentTest> extentTests =
@@ -26,15 +29,39 @@ public abstract class BaseTest {
     @BeforeMethod(alwaysRun = true)
     public void setUp(ITestResult result) {
 
-        // Start Android or iOS based on configuration
-        DriverManager.startDriver(result.getMethod().getMethodName());
+        String sprint = primarySprint(result);
+        String sessionName = browserStackSessionName(result, sprint);
+
+        org.testng.xml.XmlTest xmlTest = result.getTestContext() != null
+                ? result.getTestContext().getCurrentXmlTest()
+                : null;
+
+        String platform = xmlParameter(xmlTest, "platform");
+        String deviceName = xmlParameter(xmlTest, "deviceName");
+        String platformVersion = xmlParameter(xmlTest, "platformVersion");
+        String app = xmlParameter(xmlTest, "app");
+        String executionType = xmlParameter(xmlTest, "executionType");
+
+        // Start Android or iOS based on configuration.
+        // A direct single-test run may not provide a TestNG XmlTest context,
+        // so fall back to the configured BrowserStack/default settings.
+        DriverManager.startDriver(
+            sessionName,
+            sprint,
+            platform,
+            deviceName,
+            platformVersion,
+            app,
+            executionType
+        );
 
         driver = DriverManager.getDriver();
+        sessionDriver = DriverManager.getSessionDriver();
 
-        for (String sprint : sprintGroups(result)) {
-            ExtentReports extent = ReportManager.getExtent(sprint);
+        for (String sprintGroup : sprintGroups(result)) {
+            ExtentReports extent = ReportManager.getExtent(sprintGroup);
             extentTests.put(
-                    sprint,
+                sprintGroup,
                     extent.createTest(
                             result.getMethod().getMethodName(),
                             result.getMethod().getDescription()
@@ -48,7 +75,7 @@ public abstract class BaseTest {
         videoRecorder = new VideoRecorder();
 
         videoRecorder.start(
-                driver,
+                        sessionDriver,
                 result.getMethod().getMethodName()
         );
     }
@@ -66,7 +93,7 @@ public abstract class BaseTest {
 
                 String screenshot =
                         ScreenshotUtils.capture(
-                                driver,
+                        sessionDriver,
                                 testName
                         );
 
@@ -145,7 +172,7 @@ public abstract class BaseTest {
     }
 
     private void updateBrowserStackStatus(ITestResult result) {
-        if (driver == null) {
+        if (sessionDriver == null) {
             return;
         }
 
@@ -156,7 +183,7 @@ public abstract class BaseTest {
 
         try {
             org.openqa.selenium.JavascriptExecutor jse =
-                    (org.openqa.selenium.JavascriptExecutor) driver;
+                    (org.openqa.selenium.JavascriptExecutor) sessionDriver;
 
             if (result.getStatus() == ITestResult.SUCCESS) {
                 jse.executeScript("browserstack_executor: {\"action\": \"setSessionStatus\", \"arguments\": {\"status\": \"passed\", \"reason\": \"Test passed successfully\"}}");
@@ -209,6 +236,38 @@ public abstract class BaseTest {
         return fallback != null && !fallback.trim().isEmpty()
                 ? new String[]{fallback}
                 : new String[]{"mixed-sprint"};
+    }
+
+    private String primarySprint(ITestResult result) {
+        String[] sprints = sprintGroups(result);
+        return sprints.length == 0 ? "mixed-sprint" : sprints[0];
+    }
+
+    private String browserStackSessionName(ITestResult result, String sprint) {
+        String methodName = result.getMethod().getMethodName();
+        String description = result.getMethod().getDescription();
+        String sessionName = sprint + " | " + methodName;
+
+        if (description != null && !description.trim().isEmpty()) {
+            sessionName += " | " + description.trim();
+        }
+
+        return sessionName.length() > 255
+                ? sessionName.substring(0, 252) + "..."
+                : sessionName;
+    }
+
+    private String xmlParameter(org.testng.xml.XmlTest xmlTest, String paramName) {
+        if (xmlTest == null) {
+            return null;
+        }
+
+        String value = xmlTest.getParameter(paramName);
+        if (value == null || value.trim().isEmpty() || value.equalsIgnoreCase(paramName)) {
+            return null;
+        }
+
+        return value.trim();
     }
 
     private String defaultSprintName(ITestResult result) {

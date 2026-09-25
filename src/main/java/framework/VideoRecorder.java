@@ -3,6 +3,7 @@ package framework;
 import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.ios.IOSStartScreenRecordingOptions;
 import io.appium.java_client.screenrecording.CanRecordScreen;
+import org.openqa.selenium.WebDriver;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -13,12 +14,12 @@ import java.time.Duration;
 import java.util.Base64;
 
 public final class VideoRecorder {
-    private AppiumDriver driver;
+    private WebDriver driver;
     private Process recordingProcess;
     private String remoteFile;
     private boolean appiumRecording;
 
-    public void start(AppiumDriver driver, String testName) {
+    public void start(WebDriver driver, String testName) {
         if (!ConfigReader.getBoolean("video.enabled", true)) {
             return;
         }
@@ -26,6 +27,13 @@ public final class VideoRecorder {
         try {
             this.driver = driver;
             PathHelper.ensureDirectory("videos");
+
+            String executionType = ConfigReader.get("executionType");
+                if (!(driver instanceof AppiumDriver)
+                    || (executionType != null && executionType.toUpperCase().startsWith("PWA_"))) {
+                System.out.println("Video recording skipped for PWA browser session.");
+                return;
+            }
 
             String safeName = testName.replaceAll("[^a-zA-Z0-9._-]", "_");
 

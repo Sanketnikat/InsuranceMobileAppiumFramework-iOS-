@@ -1,0 +1,27 @@
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+framework: testng
+
+projectName: "BimaSugam-Sprint-5"
+buildName: "Sprint5-BD2M-416"
+
+browserstackLocal: true
+
+browserStackLocalOptions:
+  forcelocal: true
+
+platforms:
+  - platformName: ios
+    deviceName: "iPhone 17 Pro"
+    platformVersion: "26.5"
+    app: "bs://8d6f23512da50d24777467283011137cd84ef2cc"
+
+testObservability: true
+networkLogs: true
+video: true
+deviceLogs: true
+
+idleTimeout: 300
+
+sessionName: "Bima Sugam iOS VPN Test"

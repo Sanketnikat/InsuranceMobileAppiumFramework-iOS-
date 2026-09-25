@@ -57,6 +57,51 @@ mvn clean test -Ddevice.udid=YOUR_DEVICE_ID
 
 mvn clean test
 
+## BrowserStack SDK
+
+The BrowserStack Java SDK dependency and project-root `browserstack.yml` are included for the BrowserStack integration. The current framework creates its Appium sessions through `DriverManager`, so the SDK Java agent is not enabled in Surefire; enabling it with the existing suite causes TestNG to report zero executed tests.
+
+Export credentials and the sprint metadata before running:
+
+export BROWSERSTACK_USERNAME=YOUR_USERNAME
+export BROWSERSTACK_ACCESS_KEY=YOUR_ACCESS_KEY
+export BROWSERSTACK_IOS_APP=bs://YOUR_IOS_APP_ID
+export BROWSERSTACK_ANDROID_APP=bs://YOUR_ANDROID_APP_ID
+export BSTACK_BUILD_NAME=Sprint-1
+export BSTACK_BUILD_TAG=BD2M-609
+
+Run one test case:
+
+mvn test -Dtest=tests.sprint1.TC05_ValidIndianMobileNumberTest#TC05_validIndianMobileNumberIsAccepted
+
+Run the configured suite:
+
+mvn clean test
+
+The SDK groups sessions under `BSTACK_BUILD_NAME`, while the framework adds the sprint, test method, and TestNG description to each session name.
+
+## BrowserStack PWA mobile web execution
+
+The same framework supports the native app execution types and opt-in PWA browser sessions:
+
+- `ANDROID_APP` - BrowserStack Android APK session
+- `IOS_APP` - BrowserStack iOS IPA session
+- `PWA_ANDROID` - BrowserStack real Android Chrome session
+- `PWA_IOS` - BrowserStack real iPhone Safari session
+
+The PWA URL is configured with `pwa.url`. PWA sessions use browser capabilities and do not use a `bs://` app ID.
+
+Run the PWA smoke test on Android Chrome:
+
+```sh
+mvn test -Dtest=tests.pwa.PwaLoginPageLoadTest \
+	-DexecutionType=PWA_ANDROID \
+	-DBROWSERSTACK_USERNAME="$BROWSERSTACK_USERNAME" \
+	-DBROWSERSTACK_ACCESS_KEY="$BROWSERSTACK_ACCESS_KEY"
+```
+
+Run it on iOS Safari by changing `PWA_ANDROID` to `PWA_IOS`. Native tests continue to use their existing APK/IPA configuration when `executionType` is `ANDROID_APP` or `IOS_APP`.
+
 ## Build number
 
 mvn clean test -Dbuild=1.0.25
