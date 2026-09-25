@@ -19,7 +19,7 @@
         <maven.compiler.target>21</maven.compiler.target>
 
         <!-- Appium -->
-        <appium.version>10.0.0</appium.version>
+        <appium.version>10.1.1</appium.version>
 
         <!-- TestNG -->
         <testng.version>7.11.0</testng.version>
